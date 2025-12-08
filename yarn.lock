@@ -1010,11 +1010,6 @@
     "@crate-crypto/node-eth-kzg-win32-arm64-msvc" "0.10.0"
     "@crate-crypto/node-eth-kzg-win32-x64-msvc" "0.10.0"
 
-"@defi-wonderland/aztec-standards@0.0.0-c2c410ee":
-  version "0.0.0-c2c410ee"
-  resolved "https://registry.yarnpkg.com/@defi-wonderland/aztec-standards/-/aztec-standards-0.0.0-c2c410ee.tgz#93afd909f0343df85c0478778eda60c30c9b9d05"
-  integrity sha512-jEFEF7o6OLc0mmRsfbF61zaXDqUWoaAHbcjkymIdueZOjRhwKN0wbqPB7nizv6LazT00oVlfhmaCJ4R+2P+ZEA==
-
 "@esbuild/aix-ppc64@0.27.1":
   version "0.27.1"
   resolved "https://registry.yarnpkg.com/@esbuild/aix-ppc64/-/aix-ppc64-0.27.1.tgz#116edcd62c639ed8ab551e57b38251bb28384de4"

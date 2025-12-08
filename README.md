@@ -2,7 +2,116 @@
 
 A CLI framework for building command-line interfaces for Aztec contracts with minimal configuration.
 
-## Quickstart
+## Getting Started
+
+### Prerequisites
+
+- Node.js >= 20.0.0
+- Yarn 1.x
+- Aztec sandbox running locally (or access to devnet)
+
+### Setup (Monorepo)
+
+```bash
+# Clone and enter the directory
+cd aztec-cli
+
+# Install dependencies
+yarn install
+
+# Build the framework (required before running any CLI)
+yarn build
+```
+
+This builds both packages:
+1. `aztec-cli` - The core framework
+2. `secret-santa-cli` - Example CLI using the framework
+
+### Run the Secret Santa CLI
+
+```bash
+# From aztec-cli root
+cd packages/secret-santa
+
+# Run the CLI
+yarn cli --help
+```
+
+Or from the monorepo root:
+```bash
+yarn workspace secret-santa-cli cli --help
+```
+
+### Quick Demo
+
+Make sure you have an Aztec sandbox running:
+```bash
+aztec start --sandbox
+```
+
+Then run the demo script which walks through a complete game:
+```bash
+cd packages/secret-santa
+yarn demo
+```
+
+---
+
+## Secret Santa CLI Commands
+
+The Secret Santa CLI demonstrates the framework with a privacy-preserving gift exchange game.
+
+### Admin Commands
+
+```bash
+# Create a new game
+yarn cli --sandbox -p "admin-pass" admin create --min 3 --max 10
+
+# View game status
+yarn cli --sandbox -p "admin-pass" admin status --game 0
+
+# Advance to next phase
+yarn cli --sandbox -p "admin-pass" admin advance --game 0
+```
+
+### Player Commands
+
+```bash
+# Enroll in a game (during Enrollment phase)
+yarn cli --sandbox -p "player-pass" enroll --game 0
+
+# Register as sender / claim a slot (during Sender Registration phase)
+yarn cli --sandbox -p "player-pass" register --game 0 --slot 1
+
+# Claim as receiver (during Receiver Claim phase)
+yarn cli --sandbox -p "player-pass" claim --game 0 --slot 2
+
+# View delivery data (after game completion)
+yarn cli --sandbox -p "player-pass" delivery --game 0 --slot 1
+
+# Check game status
+yarn cli --sandbox -p "player-pass" status --game 0
+```
+
+### Watch Events
+
+```bash
+# Watch game events in real-time
+yarn cli --sandbox -p "player-pass" watch --game 0
+```
+
+### Game Flow
+
+```
+1. ENROLLMENT        → Players enroll in the game
+2. SENDER_REGISTRATION → Players claim slots and publish encryption keys
+3. RECEIVER_CLAIM    → Players claim slots and submit encrypted delivery addresses
+4. COMPLETED         → Senders decrypt delivery addresses and ship gifts
+```
+
+---
+
+## Building Your Own CLI
 
 ### 1. Create a new CLI project
 
@@ -15,7 +124,7 @@ yarn add -D typescript tsx @types/node
 
 ### 2. Copy your contract artifact
 
-**Important:** The artifact must be post-processed before use. Run `aztec-postprocess-contract` in your contract project first:
+**Important:** The artifact must be post-processed before use:
 
 ```bash
 # In your contract project directory
@@ -76,97 +185,9 @@ yarn cli call my_function --arg1 value1 --arg2 value2
 
 ---
 
-## Overview
-
-Building a CLI for an Aztec contract typically requires a lot of boilerplate:
-- Wallet creation from passphrases
-- Network configuration (sandbox/devnet)
-- Sponsored fee payment setup
-- Contract deployment and connection
-- Configuration persistence
-
-**aztec-cli** provides all of this out of the box. You just provide your contract artifact, and you get a working CLI with built-in commands. Add custom commands for your contract-specific logic.
-
-## Installation
-
-```bash
-yarn add aztec-cli
-# or
-npm install aztec-cli
-```
-
-## Quick Start
-
-### Minimal CLI (Just Artifact)
-
-```typescript
-import { createCLI } from 'aztec-cli';
-import artifact from './artifacts/MyContract.json' with { type: 'json' };
-
-const cli = createCLI({
-  name: 'my-contract',
-  version: '1.0.0',
-  description: 'CLI for MyContract',
-  configFileName: '.my-contract.json',
-  artifact,
-});
-
-cli.run();
-```
-
-This gives you these commands for free:
-
-```bash
-# Deploy or connect to a contract
-my-contract setup
-
-# Show configuration
-my-contract info
-
-# Call any contract function with named flags
-my-contract call get_state --view
-my-contract call buy_ticket --ticket-id 5 --token 0x123... --price 1000
-```
-
-### Extended CLI (With Custom Commands)
-
-```typescript
-import { createCLI, display, getSponsoredPaymentMethod } from 'aztec-cli';
-import artifact from './artifacts/Raffle.json' with { type: 'json' };
-
-// Extend base config with contract-specific fields
-interface RaffleConfig extends BaseConfig {
-  tokenAddress?: string;
-  ticketPrice?: string;
-}
-
-const cli = createCLI<RaffleConfig>({
-  name: 'raffle',
-  version: '1.0.0',
-  description: 'Aztec Raffle CLI',
-  configFileName: '.raffle.json',
-  artifact,
-});
-
-// Add custom command with domain-specific logic
-cli.command('buy <ticket-id>')
-   .description('Buy a raffle ticket')
-   .action(async (ticketId) => {
-     const { wallet, accountAddress } = await cli.getWallet();
-     const contract = await cli.getContract();
-     const config = cli.getConfig();
-
-     // Custom authwit logic for token transfer
-     const paymentMethod = await getSponsoredPaymentMethod(wallet);
-     // ... your custom logic here
-
-     display.success(`Ticket #${ticketId} purchased!`);
-   });
-
-cli.run();
-```
-
 ## Built-in Commands
+
+Every CLI built with aztec-cli gets these commands for free:
 
 ### `setup`
 
@@ -211,6 +232,57 @@ my-cli call transfer --recipient 0x123... --amount 1000
 -p, --passphrase <pass>  # Provide passphrase non-interactively
 ```
 
+---
+
+## Adding Custom Commands
+
+Extend your CLI with domain-specific commands:
+
+```typescript
+import { createCLI, display, getSponsoredPaymentMethod, type BaseConfig } from 'aztec-cli';
+import artifact from './artifacts/MyContract.json' with { type: 'json' };
+
+// Extend base config with contract-specific fields
+interface MyConfig extends BaseConfig {
+  tokenAddress?: string;
+}
+
+const cli = createCLI<MyConfig>({
+  name: 'my-cli',
+  version: '1.0.0',
+  description: 'My Aztec CLI',
+  configFileName: '.my-cli.json',
+  artifact,
+});
+
+// Add custom command
+cli.command('my-action')
+   .description('Do something custom')
+   .option('--amount <n>', 'Amount to use', parseInt)
+   .action(async (options) => {
+     const { wallet, accountAddress } = await cli.getWallet();
+     const contract = await cli.getContract();
+     const config = cli.getConfig();
+
+     display.step('Executing custom action...');
+
+     const paymentMethod = await getSponsoredPaymentMethod(wallet);
+     await (contract.methods as any)
+       .my_function(options.amount)
+       .send({
+         from: accountAddress,
+         fee: { paymentMethod },
+       })
+       .wait();
+
+     display.success('Action completed!');
+   });
+
+cli.run();
+```
+
+---
+
 ## API Reference
 
 ### `createCLI(options)`
@@ -222,7 +294,7 @@ interface CLIOptions<TConfig extends BaseConfig> {
   name: string;           // CLI name (used in help)
   version: string;        // CLI version
   description: string;    // CLI description
-  configFileName: string; // Config file name (e.g., '.raffle.json')
+  configFileName: string; // Config file name (e.g., '.my-cli.json')
   artifact: unknown;      // Contract artifact JSON
   defaultConfig?: Partial<TConfig>;  // Default config values
 }
@@ -243,6 +315,9 @@ cli.getContract(): Promise<ContractBase>
 // Get current config
 cli.getConfig(): TConfig
 
+// Get config service for updates
+cli.getConfigService(): ConfigService<TConfig>
+
 // Register a custom command
 cli.command(name: string): Command
 
@@ -255,10 +330,10 @@ cli.run(): void
 ```typescript
 import {
   // Display utilities
-  display,  // { success, error, info, step, header, keyValue, ... }
+  display,  // { success, error, info, warning, step, header, keyValue, divider }
 
   // Prompt utilities
-  prompts,  // { promptPassphrase, promptAddress, promptConfirm, ... }
+  prompts,  // { promptPassphrase, promptAddress, promptConfirm, promptString, promptNumber }
 
   // Wallet utilities
   getSponsoredPaymentMethod,
@@ -277,6 +352,8 @@ import {
 } from 'aztec-cli';
 ```
 
+---
+
 ## What's Generic vs. Contract-Specific
 
 ### Generic (Provided by Framework)
@@ -294,259 +371,60 @@ import {
 
 | Component | Example |
 |-----------|---------|
-| Business logic | Escrow salt = Logic address |
-| State machines | Phase names and transitions |
+| Business logic | Game phases, state machines |
 | Authorization | Authwit for token transfers |
-| Related contracts | Token, Dripper integration |
-| Key derivation | Master keys for escrow |
+| Related contracts | Token integration |
+| Key derivation | Encryption keys |
 | Display format | Pretty-printing contract state |
-
-## End-to-End Example: Using Generic Commands
-
-This example shows a complete flow using only the built-in commands (no custom commands needed).
-
-### Prerequisites
-
-```bash
-# Start Aztec sandbox
-aztec start --sandbox
-```
-
-### Step 1: Setup Your CLI
-
-```bash
-# Create minimal CLI (see Quickstart above)
-# Or use any contract artifact
-```
-
-### Step 2: Deploy Contract
-
-```bash
-yarn cli --sandbox -p "my-pass" setup
-
-# Output:
-# → Connecting to sandbox (http://localhost:8080)...
-# ✓ Connected to sandbox
-# → Initializing wallet...
-# ✓ Account deployed!
-#   Account: 0x1234...abcd (newly deployed)
-#
-# ═══ MyContract Setup ═══
-#
-# ? What would you like to do? Deploy a new MyContract
-# ? Enter owner (AztecAddress): 0x1234...
-# ? Enter initial_value (Field): 100
-# → Deploying new MyContract contract...
-# ✓ Contract deployed and saved to config!
-#   Contract: 0x5678...efgh (newly deployed)
-```
-
-### Step 3: View Configuration
-
-```bash
-yarn cli info
-
-# Output:
-# ═══ MyContract Configuration ═══
-#   Network: sandbox
-#   Node URL: http://localhost:8080
-#   Contract: 0x5678...efgh
-# ────────────────────────────────────────
-# ℹ Run 'my-cli call <function>' to call contract functions
-```
-
-### Step 4: Call View Functions
-
-```bash
-# Call any unconstrained function (simulated, no transaction)
-yarn cli --sandbox -p "my-pass" call get_value --view
-
-# Output:
-# → Connecting to sandbox...
-# → Initializing wallet...
-# → Connecting to contract...
-# → Calling get_value...
-# ✓ Result:
-# 100
-```
-
-### Step 5: Call Mutating Functions
-
-```bash
-# Call private/public functions (sends transaction)
-yarn cli --sandbox -p "my-pass" call set_value --new-value 200
-
-# Output:
-# → Calling set_value...
-# ✓ Transaction completed!
-#   Status: success
-
-# Verify the change
-yarn cli --sandbox -p "my-pass" call get_value --view
-# Result: 200
-```
-
-### Step 6: Complex Function Calls
-
-```bash
-# Functions with multiple parameters
-yarn cli --sandbox -p "my-pass" call transfer \
-  --from 0x1234... \
-  --to 0x5678... \
-  --amount 1000
-
-# If you omit a parameter, you'll be prompted:
-yarn cli --sandbox -p "my-pass" call transfer
-# ? Enter from (AztecAddress): 0x1234...
-# ? Enter to (AztecAddress): 0x5678...
-# ? Enter amount (Field): 1000
-```
-
-### Flow Summary
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│              GENERIC CLI WORKFLOW                           │
-├─────────────────────────────────────────────────────────────┤
-│  1. yarn cli setup                                          │
-│     └── Deploy contract or connect to existing              │
-│                                                             │
-│  2. yarn cli info                                           │
-│     └── View saved configuration                            │
-│                                                             │
-│  3. yarn cli call <function> --view                         │
-│     └── Read contract state (unconstrained functions)       │
-│                                                             │
-│  4. yarn cli call <function> --arg1 val1 --arg2 val2        │
-│     └── Modify contract state (private/public functions)    │
-└─────────────────────────────────────────────────────────────┘
-```
 
 ---
 
-## Example: Raffle CLI
-
-See `examples/raffle-cli/` for a complete example with custom commands.
-
-### Structure
+## Project Structure
 
 ```
-examples/raffle-cli/
-├── src/
-│   ├── index.ts           # CLI entry point
-│   ├── artifacts/
-│   │   └── Raffle.json    # Contract artifact
-│   └── commands/
-│       ├── admin.ts       # close, pick-winner
-│       └── player.ts      # buy, claim, balance, status
-├── package.json
-└── tsconfig.json
+aztec-cli/
+├── packages/
+│   ├── cli-framework/     # Core framework (aztec-cli package)
+│   │   └── src/
+│   │       ├── cli/       # CLI builder
+│   │       ├── core/      # Config, network, wallet, display, prompts
+│   │       └── contract/  # Artifact loading, deploy/connect
+│   │
+│   └── secret-santa/      # Example CLI (secret-santa-cli package)
+│       └── src/
+│           ├── commands/  # Admin, player, watch commands
+│           ├── services/  # Game logic, crypto, events
+│           └── artifacts/ # Contract artifact
+│
+├── package.json           # Monorepo root
+└── README.md
 ```
 
-### Entry Point (`index.ts`)
+## Troubleshooting
 
-```typescript
-import { createCLI, type BaseConfig } from 'aztec-cli';
-import RaffleArtifact from './artifacts/Raffle.json' with { type: 'json' };
-import { registerAdminCommands } from './commands/admin.js';
-import { registerPlayerCommands } from './commands/player.js';
+### "Cannot find module 'aztec-cli'"
 
-interface RaffleConfig extends BaseConfig {
-  tokenAddress?: string;
-  ticketPrice?: string;
-  maxTickets?: number;
-}
-
-const cli = createCLI<RaffleConfig>({
-  name: 'raffle',
-  version: '1.0.0',
-  description: 'Aztec Raffle CLI',
-  configFileName: '.raffle.json',
-  artifact: RaffleArtifact,
-});
-
-// Register custom commands
-registerAdminCommands(cli);
-registerPlayerCommands(cli);
-
-cli.run();
-```
-
-### Custom Command (`commands/player.ts`)
-
-```typescript
-import { AztecAddress } from '@aztec/aztec.js/addresses';
-import { Fr } from '@aztec/aztec.js/fields';
-import { TokenContract } from '@defi-wonderland/aztec-standards/artifacts/Token.js';
-import { type CLIBuilder, display, getSponsoredPaymentMethod } from 'aztec-cli';
-
-export function registerPlayerCommands(cli: CLIBuilder<RaffleConfig>): void {
-  const program = cli.getProgram();
-
-  program
-    .command('buy <ticket-id>')
-    .description('Buy a raffle ticket')
-    .action(async (ticketIdStr: string) => {
-      const ticketId = parseInt(ticketIdStr, 10);
-      const { wallet, accountAddress, node } = await cli.getWallet();
-      const contract = await cli.getContract();
-      const config = cli.getConfig();
-
-      // Get token contract for authwit
-      const tokenContract = await TokenContract.at(
-        AztecAddress.fromString(config.tokenAddress!),
-        wallet,
-      );
-
-      // Create authwit for token transfer
-      const nonce = Fr.random();
-      const transferCall = tokenContract.methods.transfer_private_to_public(
-        accountAddress,
-        contract.address,
-        BigInt(config.ticketPrice!),
-        nonce,
-      );
-      const authwit = await wallet.createAuthWit(accountAddress, {
-        caller: contract.address,
-        action: transferCall,
-      });
-
-      // Buy ticket with authwit
-      const paymentMethod = await getSponsoredPaymentMethod(wallet);
-      await (contract.methods as any)
-        .buy_ticket(ticketId, tokenAddress, ticketPrice, nonce)
-        .send({
-          from: accountAddress,
-          fee: { paymentMethod },
-          authWitnesses: [authwit],
-        })
-        .wait();
-
-      display.success(`Ticket #${ticketId} purchased!`);
-    });
-}
-```
-
-### Running the Example
-
+The framework hasn't been built. Run from the monorepo root:
 ```bash
-cd examples/raffle-cli
-yarn install
-yarn cli --help
-
-# With sandbox
-yarn cli --sandbox -p "my-passphrase" setup
-yarn cli status
-yarn cli buy 1
+yarn build
 ```
 
-## Dependencies
+### "Contract's public bytecode has not been transpiled"
 
-- `@aztec/aztec.js`: 3.0.0-devnet.5
-- `@aztec/test-wallet`: 3.0.0-devnet.5
-- `commander`: ^12.1.0
-- `@inquirer/prompts`: ^7.0.0
-- `chalk`: ^5.3.0
+Your contract artifact needs post-processing:
+```bash
+# In your contract project
+aztec-postprocess-contract
+```
+
+### Connection errors
+
+Make sure the Aztec sandbox is running:
+```bash
+aztec start --sandbox
+```
+
+---
 
 ## License
 
