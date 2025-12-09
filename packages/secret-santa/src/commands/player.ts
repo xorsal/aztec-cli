@@ -105,7 +105,11 @@ export function registerPlayerCommands(cli: CLIBuilder<SecretSantaConfig>): void
         // Scan events to find already claimed slots
         const { node } = await cli.getWallet();
         display.step("Scanning for claimed slots...");
-        const { senderSlots: claimedSlots } = await getClaimedSlotsFromEvents(node, BigInt(gameId));
+        const { senderSlots: claimedSlots } = await getClaimedSlotsFromEvents(
+          node,
+          contract.address,
+          BigInt(gameId)
+        );
 
         // Calculate available slots (1 to maxParticipants)
         const allSlots = Array.from({ length: maxParticipants }, (_, i) => i + 1);
@@ -191,7 +195,11 @@ export function registerPlayerCommands(cli: CLIBuilder<SecretSantaConfig>): void
 
         // Scan events to find slot status
         display.step("Scanning for slot status...");
-        const { senderSlots, receiverSlots } = await getClaimedSlotsFromEvents(node, BigInt(gameId));
+        const { senderSlots, receiverSlots } = await getClaimedSlotsFromEvents(
+          node,
+          contract.address,
+          BigInt(gameId)
+        );
 
         // Calculate available slots (sender claimed but no receiver yet)
         const availableSlots = senderSlots.filter(s => !receiverSlots.includes(s));

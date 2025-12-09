@@ -83,4 +83,7 @@ export {
   simulateContractFunction,
   parseArgument,
   formatReturnValue,
+  // Events
+  type EventFetchOptions,
+  getPublicEvents,
 } from "./contract/index.js";

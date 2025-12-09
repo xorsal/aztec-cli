@@ -64,8 +64,8 @@ export function registerWatchCommand(cli: CLIBuilder<SecretSantaConfig>): void {
             if (currentBlock > lastBlock) {
               // Fetch events from new blocks
               const [slotEvents, receiverEvents] = await Promise.all([
-                getSlotClaimedEvents(node, lastBlock + 1, currentBlock + 1),
-                getReceiverClaimedEvents(node, lastBlock + 1, currentBlock + 1),
+                getSlotClaimedEvents(node, contract.address, lastBlock + 1, currentBlock + 1),
+                getReceiverClaimedEvents(node, contract.address, lastBlock + 1, currentBlock + 1),
               ]);
 
               // Filter by game ID and process new events
